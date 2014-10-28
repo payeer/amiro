@@ -5,10 +5,6 @@
     <td colspan="2"><hr /></td>
 </tr>
 <tr>
-    <td>%%payeer_url%%:</td>
-    <td><input type="text" name="payeer_url" class="field" value="##payeer_url##" size="40" /></td>
-</tr>
-<tr>
     <td>%%payeer_shop%%:</td>
     <td><input type="text" name="payeer_shop" class="field" value="##payeer_shop##" size="40" /></td>
 </tr>
@@ -61,14 +57,14 @@
 --##
 
 <!--#set var="pay_form" value="
-<form name="paymentform" action="##payeer_url##" method="get">
+<form name="paymentform" action="//payeer.com/api/merchant/m.php" method="get">
 	<input type="hidden" name="m_shop" value="##payeer_shop##">
 	<input type="hidden" name="m_orderid" value="##order##">
 	<input type="hidden" name="m_amount" value="##amount##">
 	<input type="hidden" name="m_curr" value="##currency##">
 	<input type="hidden" name="m_desc" value="##description##">
 	<input type="hidden" name="m_sign" value="##sign##">
-	<input type="submit" name="m_process" value="Pay with Payeer" />
+	<input type="submit" name="m_process" value="Оплатить" />
 </form>
 <script type="text/javascript">
     document.forms.paymentform.submit();

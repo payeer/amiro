@@ -11,9 +11,13 @@ class ATO_Payeer_Callback
     private $_secretKey;
 	
 	private $_ipfilter;
+	
+	private $_log;
+	
+	private $_emailerr;
 
 
-    public function __construct(array $request, $secretKey, $ipfilter)
+    public function __construct(array $request, $secretKey, $ipfilter, $log, $emailerr)
     {
         $this->_response = AMI::getSingleton('response');
 		
@@ -23,11 +27,15 @@ class ATO_Payeer_Callback
 		
 		$this->_ipfilter = (string)$ipfilter;
 		
+		$this->_log = (string)$log;
+		
+		$this->_emailerr = (string)$emailerr;
+		
         $this->validateRequestParams();
     }
 
     private function validateRequestParams()
-    {
+    {	
 		if (isset($_POST['m_operation_id']) && isset($_POST['m_sign']))
 		{
 			// проверка принадлежности ip списку доверенных ip
@@ -60,6 +68,25 @@ class ATO_Payeer_Callback
 				$valid_ip = TRUE;
 			}
 		
+			$log_text = 
+				"--------------------------------------------------------\n".
+				"operation id		".$_POST["m_operation_id"]."\n".
+				"operation ps		".$_POST["m_operation_ps"]."\n".
+				"operation date		".$_POST["m_operation_date"]."\n".
+				"operation pay date	".$_POST["m_operation_pay_date"]."\n".
+				"shop				".$_POST["m_shop"]."\n".
+				"order id			".$_POST["m_orderid"]."\n".
+				"amount				".$_POST["m_amount"]."\n".
+				"currency			".$_POST["m_curr"]."\n".
+				"description		".base64_decode($_POST["m_desc"])."\n".
+				"status				".$_POST["m_status"]."\n".
+				"sign				".$_POST["m_sign"]."\n\n";
+					
+			if ($this->_log == 1)
+			{
+				file_put_contents($_SERVER['DOCUMENT_ROOT'].'/payeer.log', $log_text, FILE_APPEND);
+			}
+	
 			$m_key = $this->_secretKey;
 			
 			$arHash = array(
@@ -84,6 +111,27 @@ class ATO_Payeer_Callback
 			}
 			else
 			{
+				$to = $this->_emailerr;
+				$subject = "Ошибка оплаты - Payment error";
+				$message = "Не удалось провести платёж через систему Payeer по следующим причинам:\n\n";
+				if ($_POST["m_sign"] != $sign_hash)
+				{
+					$message.=" - Не совпадают цифровые подписи\n";
+				}
+				if ($_POST['m_status'] != "success")
+				{
+					$message.=" - Cтатус платежа не является success\n";
+				}
+				if (!$valid_ip)
+				{
+					$message.=" - ip-адрес сервера не является доверенным\n";
+					$message.="   доверенные ip: ".$this->_ipfilter."\n";
+					$message.="   ip текущего сервера: ".$_SERVER['REMOTE_ADDR']."\n";
+				}
+				$message.="\n".$log_text;
+				$headers = "From: no-reply@".$_SERVER['HTTP_SERVER']."\r\nContent-type: text/plain; charset=utf-8 \r\n";
+				mail($to, $subject, $message, $headers);
+		
 				$this->sendResponse($_POST['m_orderid'] . '|error');
 			}
 		}
@@ -98,5 +146,7 @@ class ATO_Payeer_Callback
 
 $secretKey = AtoPaymentSystem::getDriverParameter('ato_payeer', 'payeer_secret_key');
 $ipfilter = AtoPaymentSystem::getDriverParameter('ato_payeer', 'payeer_ip_filter');
-	
-$atoOnPayCallback = new ATO_Payeer_Callback($_POST, $secretKey, $ipfilter);
+$log = AtoPaymentSystem::getDriverParameter('ato_payeer', 'payeer_log');
+$emailerr = AtoPaymentSystem::getDriverParameter('ato_payeer', 'payeer_email_error');
+
+$atoPayeerCallback = new ATO_Payeer_Callback($_POST, $secretKey, $ipfilter, $log, $emailerr);

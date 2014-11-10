@@ -8,11 +8,6 @@ Pay using Payeer
 %%driver_button_caption%ru%%
 Заплатить через Payeer
 
-%%payeer_url%en%%
-Merchant URL
-%%payeer_url%ru%%
-URL мерчанта
-
 %%payeer_shop%en%%
 Merchant ID
 %%payeer_shop%ru%%

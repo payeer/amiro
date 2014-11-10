@@ -12,7 +12,6 @@ class AtoPayeer_PaymentSystemDriver extends AMI_PaymentSystemDriver{
 
     private $_obligatoryParams =
         array(
-			'payeer_url',
             'payeer_shop',
             'payeer_secret_key'
         );
@@ -133,8 +132,25 @@ class AtoPayeer_PaymentSystemDriver extends AMI_PaymentSystemDriver{
 
     public function payCallback($aGet, $aPost, &$aRes, $aCheckData, $aOrderData)
     {
+
         $response = AMI::getSingleton('response');
 
+        foreach (array('order_id', 'order_amount', 'sign') as $param) {
+            if (empty($aGet[$param])) {
+                $response->start()->write('ato_payeer[1]');
+                return -1;
+            }
+        }
+        $sign = md5(
+            $aGet['order_id'] .
+            'ato_payeer' .
+            $aGet['order_amount'] .
+            $aCheckData['payeer_secret_key']
+        );
+        if ($aGet['sign'] != $sign) {
+            $response->start()->write('ato_payeer[2]');
+            return -1;
+        }
         $response->start()->write('ato_payeer[0]');
         return 1;
     }

@@ -8,6 +8,11 @@ Pay using Payeer
 %%driver_button_caption%ru%%
 Заплатить через Payeer
 
+%%payeer_url%en%%
+Merchant URL (default, //payeer.com/merchant/)
+%%payeer_url%ru%%
+URL мерчанта (по умолчанию, //payeer.com/merchant/)
+
 %%payeer_shop%en%%
 Merchant ID
 %%payeer_shop%ru%%
@@ -18,20 +23,15 @@ Secret key
 %%payeer_secret_key%ru%%
 Секретный ключ
 
+%%payeer_order_desc%en%%
+Order description
+%%payeer_order_desc%ru%%
+Комментарий к оплате
+
 %%payeer_log%en%%
 Log order
 %%payeer_log%ru%%
 Журнал заказов
-
-%%payeer_log_off%en%%
-off
-%%payeer_log_off%ru%%
-выключить
-
-%%payeer_log_on%en%%
-on
-%%payeer_log_on%ru%%
-включить
 
 %%payeer_ip_filter%en%%
 IP filter

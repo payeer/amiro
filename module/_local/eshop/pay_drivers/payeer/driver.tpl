@@ -17,10 +17,6 @@
     <td><input type="text" name="payeer_secret_key" class="field" value="##payeer_secret_key##" size="40" /></td>
 </tr>
 <tr>
-	<td>%%payeer_order_desc%%:</td>
-    <td><input type="text" name="payeer_order_desc" class="field" value="##payeer_order_desc##" size="40" /></td>
-</tr>
-<tr>
 	<td>%%payeer_log%%:</td>
     <td><input type="text" name="payeer_log" class="field" value="##payeer_log##" size="40" /></td>
 </tr>

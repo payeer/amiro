@@ -45,7 +45,7 @@ class Payeer_PaymentSystemDriver extends AMI_PaymentSystemDriver
     {
         $aData += array('payeer_payment' => 0);
 		
-		$aData['description'] = base64_encode($aData['payeer_order_desc']);
+		$aData['description'] = base64_encode($aData['description']);
 		
 		if ($aData['currency'] == 'RUR')
 		{

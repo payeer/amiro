@@ -9,9 +9,9 @@ Pay using Payeer
 Заплатить через Payeer
 
 %%payeer_url%en%%
-Merchant URL (default, //payeer.com/merchant/)
+Merchant URL (default, https://payeer.com/merchant/)
 %%payeer_url%ru%%
-URL мерчанта (по умолчанию, //payeer.com/merchant/)
+URL мерчанта (по умолчанию, https://payeer.com/merchant/)
 
 %%payeer_shop%en%%
 Merchant ID
@@ -22,11 +22,6 @@ Merchant ID
 Secret key
 %%payeer_secret_key%ru%%
 Секретный ключ
-
-%%payeer_order_desc%en%%
-Order description
-%%payeer_order_desc%ru%%
-Комментарий к оплате
 
 %%payeer_log%en%%
 Log order

@@ -7,163 +7,189 @@ require_once '_local/eshop/AtoPaymentSystem.php';
 
 class Payeer_Callback
 {
-    private $_secretKey;
-	
-	private $_ipfilter;
-	
-	private $_log;
-	
-	private $_emailerr;
-
-    public function __construct(array $request, $secretKey, $ipfilter, $log, $emailerr)
+    public function __construct()
     {
-        $this->_secretKey = (string)$secretKey;
-		
-		$this->_ipfilter = (string)$ipfilter;
-		
-		$this->_log = (string)$log;
-		
-		$this->_emailerr = (string)$emailerr;
-		
-        $this->validateRequestParams();
+        $this->_secretKey = (string)AtoPaymentSystem::getDriverParameter('payeer', 'payeer_secret_key');
+		$this->_ipfilter = (string) AtoPaymentSystem::getDriverParameter('payeer', 'payeer_ip_filter');
+		$this->_log = (string)AtoPaymentSystem::getDriverParameter('payeer', 'payeer_log');
+		$this->_emailerr = (string)AtoPaymentSystem::getDriverParameter('payeer', 'payeer_email_error');
     }
 
-    private function validateRequestParams()
+    public function validateRequestParams(array $request)
     {
-		if (isset($_POST['m_operation_id']) && isset($_POST['m_sign']))
+		if (isset($request['m_operation_id']) && isset($request['m_sign']))
 		{
-			// проверка принадлежности ip списку доверенных ip
-			$list_ip_str = str_replace(' ', '', $this->_ipfilter);
+			$err = false;
+			$message = '';
 			
-			if (!empty($list_ip_str)) 
-			{
-				$list_ip = explode(',', $list_ip_str);
-				$this_ip = $_SERVER['REMOTE_ADDR'];
-				$this_ip_field = explode('.', $this_ip);
-				$list_ip_field = array();
-				$i = 0;
-				$valid_ip = FALSE;
-				foreach ($list_ip as $ip)
-				{
-					$ip_field[$i] = explode('.', $ip);
-					if ((($this_ip_field[0] ==  $ip_field[$i][0]) or ($ip_field[$i][0] == '*')) and
-						(($this_ip_field[1] ==  $ip_field[$i][1]) or ($ip_field[$i][1] == '*')) and
-						(($this_ip_field[2] ==  $ip_field[$i][2]) or ($ip_field[$i][2] == '*')) and
-						(($this_ip_field[3] ==  $ip_field[$i][3]) or ($ip_field[$i][3] == '*')))
-						{
-							$valid_ip = TRUE;
-							break;
-						}
-					$i++;
-				}
-			}
-			else
-			{
-				$valid_ip = TRUE;
-			}
-		
+			// запись логов
+			
 			$log_text = 
-				"--------------------------------------------------------\n".
-				"operation id		".$_POST["m_operation_id"]."\n".
-				"operation ps		".$_POST["m_operation_ps"]."\n".
-				"operation date		".$_POST["m_operation_date"]."\n".
-				"operation pay date	".$_POST["m_operation_pay_date"]."\n".
-				"shop				".$_POST["m_shop"]."\n".
-				"order id			".$_POST["m_orderid"]."\n".
-				"amount				".$_POST["m_amount"]."\n".
-				"currency			".$_POST["m_curr"]."\n".
-				"description		".base64_decode($_POST["m_desc"])."\n".
-				"status				".$_POST["m_status"]."\n".
-				"sign				".$_POST["m_sign"]."\n\n";
-					
-			if (!empty($this->_log))
+				"--------------------------------------------------------\n" .
+				"operation id		" . $request["m_operation_id"] . "\n" .
+				"operation ps		" . $request["m_operation_ps"] . "\n" .
+				"operation date		" . $request["m_operation_date"] . "\n" .
+				"operation pay date	" . $request["m_operation_pay_date"] . "\n" .
+				"shop				" . $request["m_shop"] . "\n" .
+				"order id			" . $request["m_orderid"] . "\n" .
+				"amount				" . $request["m_amount"] . "\n" .
+				"currency			" . $request["m_curr"] . "\n" .
+				"description		" . base64_decode($request["m_desc"]) . "\n" .
+				"status				" . $request["m_status"] . "\n" .
+				"sign				" . $request["m_sign"] . "\n\n";
+			
+			$log_file = $this->_log;
+			
+			if (!empty($log_file))
 			{
-				file_put_contents($_SERVER['DOCUMENT_ROOT'] . $this->_log, $log_text, FILE_APPEND);
+				file_put_contents($_SERVER['DOCUMENT_ROOT'] . $log_file, $log_text, FILE_APPEND);
 			}
-	
-			$m_key = $this->_secretKey;
 			
-			$arHash = array(
-				$_POST['m_operation_id'],
-				$_POST['m_operation_ps'],
-				$_POST['m_operation_date'],
-				$_POST['m_operation_pay_date'],
-				$_POST['m_shop'],
-				$_POST['m_orderid'],
-				$_POST['m_amount'],
-				$_POST['m_curr'],
-				$_POST['m_desc'],
-				$_POST['m_status'],
-				$m_key
-			);
+			// проверка цифровой подписи и ip
 			
-			$sign_hash = strtoupper(hash('sha256', implode(":", $arHash)));
+			$sign_hash = strtoupper(hash('sha256', implode(":", array(
+				$request['m_operation_id'],
+				$request['m_operation_ps'],
+				$request['m_operation_date'],
+				$request['m_operation_pay_date'],
+				$request['m_shop'],
+				$request['m_orderid'],
+				$request['m_amount'],
+				$request['m_curr'],
+				$request['m_desc'],
+				$request['m_status'],
+				$this->_secretKey
+			))));
+			
+			$valid_ip = true;
+			$sIP = str_replace(' ', '', $this->_ipfilter);
+			
+			if (!empty($sIP))
+			{
+				$arrIP = explode('.', $_SERVER['REMOTE_ADDR']);
+				if (!preg_match('/(^|,)(' . $arrIP[0] . '|\*{1})(\.)' .
+				'(' . $arrIP[1] . '|\*{1})(\.)' .
+				'(' . $arrIP[2] . '|\*{1})(\.)' .
+				'(' . $arrIP[3] . '|\*{1})($|,)/', $sIP))
+				{
+					$valid_ip = false;
+				}
+			}
+			
+			if (!$valid_ip)
+			{
+				$message .= " - ip address of the server is not trusted\n" . 
+				"   trusted ip: " . $sIP . "\n" . 
+				"   ip of the current server: " . $_SERVER['REMOTE_ADDR'] . "\n";
+				$err = true;
+			}
 
-			$oDB = AMI::getSingleton('db');
-				
-			$status_now = $oDB->fetchValue(
-				DB_Query::getSnippet("SELECT `status` FROM `cms_es_orders` WHERE `id` = %s")
-				->q($_POST['m_orderid'])
-			);
-				
-			if ($_POST['m_sign'] == $sign_hash && $_POST['m_status'] == 'success' && $valid_ip)
+			if ($request["m_sign"] != $sign_hash)
 			{
-				if ($status_now != 'checkout')
+				$message .= " - do not match the digital signature\n";
+				$err = true;
+			}
+			
+			if (!$err)
+			{
+				// загрузка заказа
+			
+				$oDB = AMI::getSingleton('db');
+
+				$order = $oDB->fetchRow(
+					DB_Query::getSnippet("SELECT `status`,`sysinfo`,`total` FROM `cms_es_orders` WHERE `id` = %s")
+					->q($request['m_orderid'])
+				);
+				
+				$sysinfo = unserialize($order['sysinfo']);
+				$order_curr = ($sysinfo['fee_curr'] == 'RUR') ? 'RUB' : $sysinfo['fee_curr'];
+				$order_amount = number_format($order['total'], 2, '.', '');
+				
+				// проверка суммы и валюты
+				
+				if ($request['m_amount'] != $order_amount)
 				{
-					$qupdate = $oDB->fetchValue(DB_Query::getUpdateQuery(
-						'cms_es_orders',
-						array('status'  => 'confirmed_done'),
-						DB_Query::getSnippet('WHERE id IN (%s)')->q($_POST['m_orderid'])
-					));
+					$message .= " - Wrong amount\n";
+					$err = true;
+				}
+
+				if ($request['m_curr'] != $order_curr)
+				{
+					$message .= " - Wrong currency\n";
+					$err = true;
+				}
+				
+				// проверка статуса
+				
+				if (!$err)
+				{
+					if ($order['status'] != 'checkout')
+					{
+						switch ($request['m_status'])
+						{
+							case 'success':
+								$qupdate = $oDB->fetchValue(DB_Query::getUpdateQuery(
+									'cms_es_orders',
+									array('status'  => 'confirmed_done'),
+									DB_Query::getSnippet('WHERE id IN (%s)')->q($request['m_orderid'])
+								));
+								return $request['m_orderid'] . '|success';
+								break;
+								
+							default:
+								$message .= " - The payment status is not success\n";
+								$qupdate = $oDB->fetchValue(DB_Query::getUpdateQuery(
+									'cms_es_orders',
+									array('status'  => 'cancelled'),
+									DB_Query::getSnippet('WHERE id IN (%s)')->q($request['m_orderid'])
+								));
+								
+								$to = $this->_emailerr;
 					
-					exit ($_POST['m_orderid'] . '|success');
+								if (!empty($to))
+								{
+									$message = "Failed to make the payment through Payeer for the following reasons:\n\n" . $message . "\n" . $log_text;
+									$headers = "From: no-reply@" . $_SERVER['HTTP_SERVER'] . "\r\n" . 
+									"Content-type: text/plain; charset=utf-8 \r\n";
+									mail($to, 'Payment error', $message, $headers);
+								}
+					
+								return $request['m_orderid'] . '|error';
+								break;
+						}
+					}
+					else
+					{
+						return false;
+					}
 				}
 			}
-			else
+			
+			if ($err)
 			{
-				if ($status_now != 'checkout')
-				{
-					$qupdate = $oDB->fetchValue(DB_Query::getUpdateQuery(
-						'cms_es_orders',
-						array('status'  => 'cancelled'),
-						DB_Query::getSnippet('WHERE id IN (%s)')->q($_POST['m_orderid'])
-					));
-					
-					$to = $this->_emailerr;
-					$subject = "Ошибка оплаты - Payment error";
-					$message = "Не удалось провести платёж через систему Payeer по следующим причинам:\n\n";
-					
-					if ($_POST["m_sign"] != $sign_hash)
-					{
-						$message .= " - Не совпадают цифровые подписи\n";
-					}
-					
-					if ($_POST['m_status'] != "success")
-					{
-						$message .= " - Cтатус платежа не является success\n";
-					}
-					
-					if (!$valid_ip)
-					{
-						$message .= " - ip-адрес сервера не является доверенным\n";
-						$message .= "   доверенные ip: ".$this->_ipfilter."\n";
-						$message .= "   ip текущего сервера: ".$_SERVER['REMOTE_ADDR']."\n";
-					}
-					
-					$message .= "\n" . $log_text;
-					$headers = "From: no-reply@" . $_SERVER['HTTP_SERVER'] . "\r\nContent-type: text/plain; charset=utf-8 \r\n";
-					mail($to, $subject, $message, $headers);
+				$to = $this->_emailerr;
 				
-					exit ($_POST['m_orderid'] . '|error');
+				if (!empty($to))
+				{
+					$message = "Failed to make the payment through Payeer for the following reasons:\n\n" . $message . "\n" . $log_text;
+					$headers = "From: no-reply@" . $_SERVER['HTTP_SERVER'] . "\r\n" . 
+					"Content-type: text/plain; charset=utf-8 \r\n";
+					mail($to, 'Payment error', $message, $headers);
 				}
+				
+				return $request['m_orderid'] . '|error';
 			}
+		}
+		else
+		{
+			return false;
 		}
     }
 }
 
-$secretKey = AtoPaymentSystem::getDriverParameter('payeer', 'payeer_secret_key');
-$ipfilter = AtoPaymentSystem::getDriverParameter('payeer', 'payeer_ip_filter');
-$log = AtoPaymentSystem::getDriverParameter('payeer', 'payeer_log');
+$atoPayeerCallback = new Payeer_Callback();
+$resultPayeer = $atoPayeerCallback->validateRequestParams($_POST);
+exit($resultPayeer);
 $emailerr = AtoPaymentSystem::getDriverParameter('payeer', 'payeer_email_error');
 
 $atoPayeerCallback = new Payeer_Callback($_POST, $secretKey, $ipfilter, $log, $emailerr);

@@ -123,7 +123,7 @@ class Payeer_Callback
 				
 				if (!$err)
 				{
-					if ($order['status'] != 'checkout')
+					if ($order['status'] != 'checkout' && $order['status'] != 'confirmed_done')
 					{
 						switch ($request['m_status'])
 						{

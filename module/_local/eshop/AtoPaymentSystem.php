@@ -7,7 +7,7 @@
  */
 
 /**
- * ATO Amiro.CMS payment system library.
+ * ATO Amiro.CMS payment sysytem library.
  *
  * @package Driver_PaymentSystem
  * @static

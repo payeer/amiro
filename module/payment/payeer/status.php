@@ -74,11 +74,10 @@ class Payeer_Callback {
 				$err = true;
 			}
 
-			$order_id = preg_replace('/[^a-zA-Z0-9_-]/', '', substr($request['m_orderid'], 0, 32));
-			
 			if (!$err) {
 
 				// загрузка заказа
+				$order_id = preg_replace('/[^a-zA-Z0-9_-]/', '', substr($request['m_orderid'], 0, 32));
 				$oDB = AMI::getSingleton('db');
 				$order = $oDB->fetchRow(DB_Query::getSnippet("SELECT `status`,`sysinfo`,`total` FROM `cms_es_orders` WHERE `id` = %s")->q($order_id));
 				$sysinfo = unserialize($order['sysinfo']);
